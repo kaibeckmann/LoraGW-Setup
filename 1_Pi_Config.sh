@@ -128,11 +128,22 @@ fi
 
 
 echo "Enabling Uart, I2C, SPI, Video Memory to 16MB"
-replaceAppend /boot/config.txt "^.*enable_uart.*$" "enable_uart=1"
-replaceAppend /boot/config.txt "^.*dtparam=i2c_arm=.*$" "dtparam=i2c_arm=on"
-replaceAppend /boot/config.txt "^.*dtparam=spi=.*$" "dtparam=spi=on"
-replaceAppend /boot/config.txt "^.*gpu_mem=.*$" "gpu_mem=16"
-replaceAppend /etc/modules "^.*i2c-dev.*$" "i2c-dev"
+raspi-config nonint do_spi 0
+raspi-config nonint do_i2c 0
+raspi-config nonint do_serial 2
+raspi-config nonint do_expand_rootfs
+raspi-config nonint do_configure_keyboard us
+raspi-config nonint do_change_locale "en_US.UTF-8"
+raspi-config nonint do_change_timezone "Europe/Berlin"
+raspi-config nonint do_memory_split 16
+raspi-config nonint do_ssh 0
+raspi-config nonint do_onewire 0
+
+#replaceAppend /boot/config.txt "^.*enable_uart.*$" "enable_uart=1"
+#replaceAppend /boot/config.txt "^.*dtparam=i2c_arm=.*$" "dtparam=i2c_arm=on"
+#replaceAppend /boot/config.txt "^.*dtparam=spi=.*$" "dtparam=spi=on"
+#replaceAppend /boot/config.txt "^.*gpu_mem=.*$" "gpu_mem=16"
+#replaceAppend /etc/modules "^.*i2c-dev.*$" "i2c-dev"
 
 echo -n "Do you want to configure timezone [y/N] "
 read
