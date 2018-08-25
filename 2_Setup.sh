@@ -88,7 +88,7 @@ selectN() {
 
 echo ""
 echo "Target board/shield for this $MODEL:"
-selectN "CH2i RAK831 Minimal" "CH2i RAK831 with WS2812B Led" "CH2i ic880a" "IMST Lora Lite (ic880a)" "RAK831 official shield" "All other models"
+selectN  "CH2i RAK831 Minimal" "CH2i RAK831 with WS2812B Led" "CH2i ic880a" "IMST Lora Lite (ic880a)" "RAK831 official shield" "All other models" "RAK831 outdoor"
 BOARD_TARGET=$?
 if [[ $BOARD_TARGET == 1 ]]; then
   GW_RESET_PIN=25
@@ -112,6 +112,22 @@ fi
 if [[ $BOARD_TARGET == 5 ]]; then
   GW_RESET_PIN=17
   export GW_RESET_PIN
+fi
+
+# RAK831 outdoor
+if [[ $BOARD_TARGET == 7 ]]; then
+  GW_RESET_PIN=17
+  export GW_RESET_PIN
+  # todo monitor script
+  MONITOR_SCRIPT=monitor-sensors.py
+  # change i2c und 1-wire
+  replaceAppend /boot/config.txt "^.*dtoverlay=i2c-gpio=.*$" "dtoverlay=i2c-gpio,bus=3,i2c_gpio_sda=25,i2c_gpio_scl=26"
+  replaceAppend /boot/config.txt "^.*dtoverlay=w1-gpio=.*$" "dtoverlay=w1-gpio,gpiopin=23,pullup=0"
+
+  # set GPS
+  DEVGPS="/dev/ttyS0"
+  sudo systemctl stop serial-getty@ttyS0.service
+  sudo systemctl disable serial-getty@ttyS0.service
 fi
 
 if [[ $MONITOR_SCRIPT == "" ]]; then
@@ -185,9 +201,9 @@ fi
 # Set the reset în in startup shell
 replace ./start.sh "^.*RESET_BCM_PIN=.*$" "SX1301_RESET_BCM_PIN=$GW_RESET_PIN"
 
-grep "Pi\ 3" /proc/device-tree/model >/dev/null
+grep "Pi\ [23]" /proc/device-tree/model >/dev/null
 if [ $? -eq 0 ]; then
-	echo "Installing nodejs v8 for Raspberry PI 3"
+    echo "Installing nodejs v8 for Raspberry PI 2/3"
 	curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
 	apt-get install nodejs
 
@@ -199,43 +215,51 @@ if [ $? -eq 0 ]; then
 
 fi
 
+grep "Pi\ 3" /proc/device-tree/model >/dev/null
+if [ $? -eq 0 ]; then
+  # if GPS is set
+  if [[ -v "${DEVGPS}" ]]; then
+    replaceAppend /boot/config.txt "^dtoverlay=pi3-miniuart-bt.*$" "pi3-miniuart-bt"
+  fi
+
+fi
 grep "Pi\ Zero" /proc/device-tree/model >/dev/null
 if [ $? -eq 0 ]; then
 	echo "Installing nodejs lts for Raspberry PI Zero"
 	wget -O - https://raw.githubusercontent.com/sdesalas/node-pi-zero/master/install-node-v.lts.sh | bash
 	append1 /home/loragw/.profile "^.*PATH:/opt/nodejs/bin.*$" "export PATH=$PATH:/opt/nodejs/bin"
-	append1 /home/loragw/.profile "^.*NODE_PATH=.*$" "NODE_PATH=/opt/nodejs/lib/node_modules"
-fi
+        append1 /home/loragw/.profile "^.*NODE_PATH=.*$" "NODE_PATH=/opt/nodejs/lib/node_modules"
+    fi
 
-apt-get -y install protobuf-compiler libprotobuf-dev libprotoc-dev automake libtool autoconf 
+    apt-get -y install protobuf-compiler libprotobuf-dev libprotoc-dev automake libtool autoconf 
 
-# Board has WS1812B LED
-if [[ $BOARD_TARGET == 2 ]]; then
-  echo "Installing WS2812B LED driver"
-  cd /home/loragw/
+    # Board has WS1812B LED
+    if [[ $BOARD_TARGET == 2 ]]; then
+      echo "Installing WS2812B LED driver"
+      cd /home/loragw/
 
-  echo "Blacklisting snd_bcm2835 module due to WS2812b LED PWM"
-  touch /etc/modprobe.d/snd-blacklist.conf
-  append1 /etc/modprobe.d/snd-blacklist.conf "^.*snd_bcm2835.*$" "blacklist snd_bcm2835"
+      echo "Blacklisting snd_bcm2835 module due to WS2812b LED PWM"
+      touch /etc/modprobe.d/snd-blacklist.conf
+      append1 /etc/modprobe.d/snd-blacklist.conf "^.*snd_bcm2835.*$" "blacklist snd_bcm2835"
 
-  echo "Installing WS2812B drivers and libraries"
-  git clone https://github.com/jgarff/rpi_ws281x
-  cd rpi_ws281x/
-  scons
-  scons deb
-  dpkg -i libws2811*.deb
-  cp ws2811.h /usr/local/include/
-  cp rpihw.h /usr/local/include/
-  cp pwm.h /usr/local/include/
-  cd python
-  python ./setup.py build
-  python setup.py install
-  cd /home/loragw/
-  npm install -g --unsafe-perm rpi-ws281x-native
-  npm link rpi-ws281x-native
-  # We're sudo reset owner
-  chown -R loragw:loragw /home/loragw/rpi_ws281x
-  chown -R loragw:loragw /home/loragw/node_modules
+      echo "Installing WS2812B drivers and libraries"
+      git clone https://github.com/jgarff/rpi_ws281x
+      cd rpi_ws281x/
+      scons
+      scons deb
+      dpkg -i libws2811*.deb
+      cp ws2811.h /usr/local/include/
+      cp rpihw.h /usr/local/include/
+      cp pwm.h /usr/local/include/
+      cd python
+      python ./setup.py build
+      python setup.py install
+      cd /home/loragw/
+      npm install -g --unsafe-perm rpi-ws281x-native
+      npm link rpi-ws281x-native
+      # We're sudo reset owner
+      chown -R loragw:loragw /home/loragw/rpi_ws281x
+      chown -R loragw:loragw /home/loragw/node_modules
 fi
 
 if [[ "$EN_OLED" =~ ^(yes|y|Y)$ ]]; then
@@ -421,6 +445,7 @@ cd /home/loragw/LoraGW-Setup
 cp ./oled.py $INSTALL_DIR/
 cp ./monitor-ws2812.py  $INSTALL_DIR/
 cp ./monitor-gpio.py  $INSTALL_DIR/
+cp ./monitor-sensors.py  $INSTALL_DIR/
 if [[ $MONITOR_SCRIPT != "" ]]; then
   ln -s $INSTALL_DIR/$MONITOR_SCRIPT  $INSTALL_DIR/monitor.py
 fi
@@ -428,12 +453,24 @@ cp ./monitor.service /lib/systemd/system/
 cp ./oled.service /lib/systemd/system/
 cp start.sh  $INSTALL_DIR/
 
+# if GPS is set
+# let set_config.py setup the gps
+if [[ -v "${DEVGPS}" ]]; then
+    GW_GPS=1
+    export GW_GPS
+    GW_GPS_PORT=$DEVGPS
+    export GW_GPS_PORT
+fi
+
 if [[ ! "$EN_TTN" =~ ^(no|n|N)$ ]]; then
   # script to get config from TTN server
   python set_config.py
 
   # Copy config to running folder
   sudo mv global_conf.json  $INSTALL_DIR/
+
+  # make local conf self modifiable ? necessary>?
+  chown ttn:ttn $INSTALL_DIR/local_conf.json
 
   # Prepare start forwarder as systemd script
   sudo cp ./loragw.service /lib/systemd/system/

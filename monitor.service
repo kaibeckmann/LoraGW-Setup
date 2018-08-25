@@ -2,6 +2,8 @@
 Description=LoraGW monitoring service
 
 [Service]
+User=ttn
+Group=ttn
 WorkingDirectory=/opt/loragw/
 ExecStart=/opt/loragw/monitor.py
 SyslogIdentifier=monitor

@@ -101,6 +101,32 @@ if [[ ! -d /home/loragw ]]; then
 	usermod -a -G i2c,spi,gpio loragw
 fi
 
+# c&p from https://github.com/kuanyili/rak831-gateway
+echo "creating user for gateway processes"
+# Create ttn group if it isn't already there
+if ! getent group ttn >/dev/null; then
+    # Add system group: ttn
+    addgroup --system ttn >/dev/null
+fi
+
+# Create ttn user if it isn't already there
+if ! getent passwd ttn >/dev/null; then
+    # Add system user: ttn
+    adduser \
+        --system \
+        --disabled-login \
+        --ingroup ttn \
+        --no-create-home \
+        --home /nonexistent \
+        --gecos "The Things Network Gateway" \
+        --shell /bin/false \
+        ttn >/dev/null
+    # Add ttn user to supplementary groups so it can
+    # reset and communicate with concentrator board
+    usermod --groups gpio,spi ttn
+fi
+
+
 echo "Enabling Uart, I2C, SPI, Video Memory to 16MB"
 replaceAppend /boot/config.txt "^.*enable_uart.*$" "enable_uart=1"
 replaceAppend /boot/config.txt "^.*dtparam=i2c_arm=.*$" "dtparam=i2c_arm=on"
