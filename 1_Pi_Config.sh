@@ -178,7 +178,13 @@ if [[ ! -f /usr/local/bin/log2ram ]]; then
 fi
 
 # set hostname to loragw-xxyy with xxyy last MAC Address digits
-set -- `cat /sys/class/net/wlan0/address`
+# wenn exitsiert, sonst eth0
+if [[ -e /sys/class/net/wlan0/address ]]; then
+    set -- `cat /sys/class/net/wlan0/address`
+elif [[ -e /sys/class/net/wlan0/address ]]; then
+    set -- `cat /sys/class/net/eth0/address`
+fi
+    
 IFS=":"; declare -a Array=($*)
 NEWHOST=loragw-${Array[4]}${Array[5]}
 
