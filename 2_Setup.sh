@@ -456,9 +456,9 @@ cp start.sh  $INSTALL_DIR/
 # if GPS is set
 # let set_config.py setup the gps
 if [[ -v "${DEVGPS}" ]]; then
-    GW_GPS=1
+    GW_GPS="true"
     export GW_GPS
-    GW_GPS_PORT=$DEVGPS
+    GW_GPS_PORT="${DEVGPS}"
     export GW_GPS_PORT
 fi
 
@@ -469,8 +469,8 @@ if [[ ! "$EN_TTN" =~ ^(no|n|N)$ ]]; then
   # Copy config to running folder
   sudo mv global_conf.json  $INSTALL_DIR/
 
-  # make local conf self modifiable ? necessary>?
-  chown ttn:ttn $INSTALL_DIR/local_conf.json
+  # make global conf self modifiable ? necessary>?
+  chown ttn:ttn $INSTALL_DIR/global_conf.json
 
   # Prepare start forwarder as systemd script
   sudo cp ./loragw.service /lib/systemd/system/
