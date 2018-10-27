@@ -19,8 +19,19 @@ import urllib
 import sys
 import signal
 import subprocess
+import smbus2
+import bme280
+
+i2c_port = 3
+
+bme280_interior_addr = 0x77
+bme280_outside_addr  = 0x76
 
 gpio_heating = 18
+
+w1-temp-sensor-case = "28-01156351aeff"
+
+logFilePath = "/home/loragw/data_log.csv"
 
 
 internet = False # True if internet connected
@@ -32,6 +43,7 @@ pktfwd   = False # True if packet forwarder is started
 
 def signal_handler(signal, frame):
     GPIO.output(gpio_heating, GPIO.LOW)
+    file.close()
     sys.exit(0)
 
 
@@ -80,6 +92,7 @@ def check_inet(delay):
     pktfwd = check_process("mp_pkt_fwd") or check_process("poly_pkt_fwd")
 
     time.sleep(delay)
+# END check_inet
 
 # Use the Broadcom SOC Pin numbers
 GPIO.setwarnings(False)
@@ -93,28 +106,63 @@ try:
 except:
    print "Error: unable to start thread"
 
+i2c_bus = smbus2.SMBus(i2c_port)
+
+bme280_interior_cal_params = bme280.load_calibration_params(bus, 
+        bme280_interior_addr)
+bme280_outside_cal_params = bme280.load_calibration_params(bus, 
+        bme280_outside_addr)
+
+file = open(logFilePath, "a")
+
+# first open, write header
+if os.stat(logFilePath).st_size == 0:
+    file.write("#time,temp case,temp int,hum int,pressure int,temp out, hum out, 
+    pressure out\n")
+
 # Now wait!
 while 1:
-    led_blu = GPIO.LOW
-    led_yel = GPIO.LOW
-    led_red = GPIO.LOW
-    led_grn = GPIO.LOW
 
-    if internet == True:
-      led_blu = GPIO.HIGH
-    else:
-      led_red = GPIO.HIGH
+    now = datetime.now()
 
-    if web == True:
-      led_yel = GPIO.HIGH
-    else:
-      led_red = GPIO.HIGH
+    data_line = ""
+    # write time
+    data_line += (str(now))
+    data_line += ','
 
-    if pktfwd == True:
-      led_grn = GPIO.HIGH
-    else:
-      led_red = GPIO.HIGH
+    # 1-wire temp sensor
 
-    time.sleep(10)
+    file_temp = open('/sys/bus/w1/devices/' + str(w1-temp-sensor-case) + 
+            '/w1_slave')
+    filecontent = file_temp.read()
+    file_temp.close()
+
+    stringvalue = filecontent.split("\n")[1].split(" ")[9]
+    temperature = float(stringvalue[2:]) / 1000
+    
+    data_line += '{:6.3f}'.format(temperature)
+    data_line += ','
+
+
+    # i2c BME280 Sensor interior
+    data= bme280.sample(i2c_bus, bme280_interior_addr, 
+            bme280_interior_cal_params)
+
+    data_line += '{:6.3f},{:5.2f},{6:2f},'.format(data.temperature, 
+            data.humidity, data.pressure)
+
+    # i2c BME280 Sensor outside
+
+    data = bme280.sample(i2c_bus, bme280_outside_addr, 
+            bme280_outside_cal_params)
+
+    data_line += '{:6.3f},{:5.2f},{6:2f}'.format(data.temperature, 
+            data.humidity, data.pressure)
+
+    file.write(data_line + "\n")
+    file.flush()
+    file.close()
+
+    time.sleep(60)
 
 
