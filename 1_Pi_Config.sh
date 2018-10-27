@@ -98,7 +98,7 @@ if [[ ! -d /home/loragw ]]; then
 	cp /home/pi/.profile /home/loragw/
 	cp /home/pi/.bashrc /home/loragw/
 	chown loragw:loragw /home/loragw/.*
-	usermod -a -G i2c,spi,gpio loragw
+    usermod -a -G i2c,spi,gpio,dialout loragw
 fi
 
 # c&p from https://github.com/kuanyili/rak831-gateway
@@ -123,7 +123,7 @@ if ! getent passwd ttn >/dev/null; then
         ttn >/dev/null
     # Add ttn user to supplementary groups so it can
     # reset and communicate with concentrator board
-    usermod --groups gpio,spi ttn
+    usermod --groups gpio,spi,i2c,dialout ttn
 fi
 
 
