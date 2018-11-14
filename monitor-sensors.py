@@ -21,6 +21,12 @@ import signal
 import subprocess
 import smbus2
 import bme280
+from datetime import datetime
+
+
+sensor_read_interval_minutes = 5
+temp_heater_on = 4.0
+temp_heater_off = 6.0
 
 i2c_port = 3
 
@@ -29,7 +35,7 @@ bme280_outside_addr  = 0x76
 
 gpio_heating = 18
 
-w1-temp-sensor-case = "28-01156351aeff"
+w1_temp_sensor_case = "28-01156351aeff"
 
 logFilePath = "/home/loragw/data_log.csv"
 
@@ -99,6 +105,8 @@ GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(gpio_heating, GPIO.OUT)
 
+heating = False
+
 signal.signal(signal.SIGINT, signal_handler)
 
 try:
@@ -108,17 +116,15 @@ except:
 
 i2c_bus = smbus2.SMBus(i2c_port)
 
-bme280_interior_cal_params = bme280.load_calibration_params(bus, 
-        bme280_interior_addr)
-bme280_outside_cal_params = bme280.load_calibration_params(bus, 
-        bme280_outside_addr)
+bme280_interior_cal_params = bme280.load_calibration_params(i2c_bus, bme280_interior_addr)
+bme280_outside_cal_params = bme280.load_calibration_params(i2c_bus, bme280_outside_addr)
 
 file = open(logFilePath, "a")
 
 # first open, write header
 if os.stat(logFilePath).st_size == 0:
-    file.write("#time,temp case,temp int,hum int,pressure int,temp out, hum out, 
-    pressure out\n")
+    file.write("#time,temp case,temp int,hum int,pressure int,temp out,hum out,pressure out,heating\n")
+
 
 # Now wait!
 while 1:
@@ -132,8 +138,7 @@ while 1:
 
     # 1-wire temp sensor
 
-    file_temp = open('/sys/bus/w1/devices/' + str(w1-temp-sensor-case) + 
-            '/w1_slave')
+    file_temp = open('/sys/bus/w1/devices/' + str(w1_temp_sensor_case) + '/w1_slave')
     filecontent = file_temp.read()
     file_temp.close()
 
@@ -145,24 +150,33 @@ while 1:
 
 
     # i2c BME280 Sensor interior
-    data= bme280.sample(i2c_bus, bme280_interior_addr, 
-            bme280_interior_cal_params)
+    data= bme280.sample(i2c_bus, bme280_interior_addr, bme280_interior_cal_params)
 
-    data_line += '{:6.3f},{:5.2f},{6:2f},'.format(data.temperature, 
-            data.humidity, data.pressure)
+    data_line += '{:6.3f},{:5.2f},{:6.2f},'.format(data.temperature, data.humidity, data.pressure)
+
+    temp_inside = data.temperature 
 
     # i2c BME280 Sensor outside
 
-    data = bme280.sample(i2c_bus, bme280_outside_addr, 
-            bme280_outside_cal_params)
+    data = bme280.sample(i2c_bus, bme280_outside_addr, bme280_outside_cal_params)
 
-    data_line += '{:6.3f},{:5.2f},{6:2f}'.format(data.temperature, 
-            data.humidity, data.pressure)
+    data_line += '{:6.3f},{:5.2f},{:6.2f},'.format(data.temperature, data.humidity, data.pressure)
 
+
+    # heater check
+
+    if temp_inside < temp_heater_on and heating == False :
+        GPIO.output(gpio_heating, GPIO.HIGH)
+        heating = True
+
+    if temp_inside > temp_heater_off and heating == True :
+        GPIO.output(gpio_heating, GPIO.LOW)
+        heating = False
+
+    data_line += str(heating)
     file.write(data_line + "\n")
     file.flush()
-    file.close()
 
-    time.sleep(60)
+    time.sleep(60 * sensor_read_interval_minutes)
 
-
+file.close()
