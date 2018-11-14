@@ -128,6 +128,12 @@ if [[ $BOARD_TARGET == 7 ]]; then
   DEVGPS="/dev/ttyS0"
   sudo systemctl stop serial-getty@ttyS0.service
   sudo systemctl disable serial-getty@ttyS0.service
+
+  #install stuff
+
+  sudo apt install -y python-smbus python3-smbus
+
+  sudo pip install RPi.bme280
 fi
 
 if [[ $MONITOR_SCRIPT == "" ]]; then
