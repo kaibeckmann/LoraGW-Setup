@@ -82,7 +82,7 @@ selectN() {
 
 echo "Updating dependencies"
 apt-get update && apt-get upgrade -y --force-yes && apt-get update
-apt-get install -y --force-yes git-core build-essential ntp scons i2c-tools
+apt-get install -y --force-yes git-core build-essential ntp scons i2c-tools vim
 
 echo "Updating python dependencies"
 apt-get install -y --force-yes python-dev swig python-psutil python-rpi.gpio python-pip
