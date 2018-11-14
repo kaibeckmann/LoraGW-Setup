@@ -99,6 +99,14 @@ if [[ ! -d /home/loragw ]]; then
 	cp /home/pi/.bashrc /home/loragw/
 	chown loragw:loragw /home/loragw/.*
     usermod -a -G i2c,spi,gpio,dialout loragw
+
+fi
+
+
+if [[ ! -d /home/loragw/LoraGW-Setup ]]; then
+    cd /home/loragw
+    sudo -u loragw git clone https://github.com/kaibeckmann/LoraGW-Setup.git
+    cd
 fi
 
 # c&p from https://github.com/kuanyili/rak831-gateway
@@ -181,7 +189,7 @@ fi
 # wenn exitsiert, sonst eth0
 if [[ -e /sys/class/net/wlan0/address ]]; then
     set -- `cat /sys/class/net/wlan0/address`
-elif [[ -e /sys/class/net/wlan0/address ]]; then
+elif [[ -e /sys/class/net/eth0/address ]]; then
     set -- `cat /sys/class/net/eth0/address`
 fi
     
