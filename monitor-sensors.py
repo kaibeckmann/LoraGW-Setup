@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # **********************************************************************************
 # monitor-sensors.py
 # **********************************************************************************
@@ -12,7 +12,7 @@
 # **********************************************************************************
 
 import RPi.GPIO as GPIO
-import thread
+import _thread
 import time
 import os
 import urllib
@@ -123,15 +123,15 @@ signal.signal(signal.SIGINT, signal_handler)
 sensors = find_1wire_sensor()
 
 # use the first
-if sensors.len() > 0:
+if len(sensors) > 0:
     w1_temp_sensor_case = sensors[0]
 else:
-    print "Error: not 1-wire Sensor found"
+    print("Error: not 1-wire Sensor found")
 
 try:
-   thread.start_new_thread( check_inet, (5, ) )
+   _thread.start_new_thread( check_inet, (5, ) )
 except:
-   print "Error: unable to start thread"
+   print("Error: unable to start thread")
 
 i2c_bus = smbus2.SMBus(i2c_port)
 

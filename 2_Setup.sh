@@ -137,9 +137,11 @@ if [[ $BOARD_TARGET == 7 ]]; then
   
   #install stuff
 
-  sudo apt install -y python-smbus python3-smbus
+  sudo apt install -y python-smbus python3-smbus python3-pip python3-rpi.gpio
 
   sudo pip install RPi.bme280
+  sudo pip3 install RPi.bme280
+  sudo pip3 install RPi.GPIO
 fi
 
 if [[ $MONITOR_SCRIPT == "" ]]; then
