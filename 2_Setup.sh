@@ -125,7 +125,7 @@ if [[ $BOARD_TARGET == 7 ]]; then
   replaceAppend /boot/config.txt "^.*dtoverlay=w1-gpio=.*$" "dtoverlay=w1-gpio,gpiopin=23,pullup=0"
 
   # set GPS
-  DEVGPS="/dev/ttyS0"
+  DEVGPS="/dev/ttyAMA0"
   sudo systemctl stop serial-getty@ttyS0.service
   sudo systemctl disable serial-getty@ttyS0.service
 
@@ -469,7 +469,7 @@ cp start.sh  $INSTALL_DIR/
 
 # if GPS is set
 # let set_config.py setup the gps
-if [[ -v "${DEVGPS}" ]]; then
+if [[ -n "${DEVGPS}" ]]; then
     GW_GPS="true"
     export GW_GPS
     GW_GPS_PORT="${DEVGPS}"
