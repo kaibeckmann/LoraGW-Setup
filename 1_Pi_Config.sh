@@ -167,6 +167,7 @@ if [[ "$REPLY" =~ ^(yes|y|Y)$ ]]; then
     touch /etc/sysctl.d/10-ipv6-privacy.conf
     replaceAppend /etc/sysctl.d/10-ipv6-privacy.conf "^.*net.ipv6.conf.all.use_tempaddr=.*$" "net.ipv6.conf.all.use_tempaddr=0"
     replaceAppend /etc/sysctl.d/10-ipv6-privacy.conf "^.*net.ipv6.conf.default.use_tempaddr=.*$" "net.ipv6.conf.default.use_tempaddr=0"
+    replaceAppend /etc/dhcpcd.conf "^.*slaac.*$" "slaac hwaddr"
 fi
 
 if [[ ! -f /usr/local/bin/log2ram ]]; then
