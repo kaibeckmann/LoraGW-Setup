@@ -22,6 +22,7 @@ import subprocess
 import smbus2
 import bme280
 from datetime import datetime
+from pathlib import Path
 
 
 sensor_read_interval_minutes = 5
@@ -37,7 +38,7 @@ gpio_heating = 18
 
 w1_temp_sensor_case = "28-01156351aeff"
 
-logFilePath = "/home/loragw/data_log.csv"
+logFilePath = "/var/log/sensor_data_log.csv"
 
 
 internet = False # True if internet connected
@@ -52,6 +53,14 @@ def signal_handler(signal, frame):
     file.close()
     sys.exit(0)
 
+def find_1wire_sensor():
+    p = Path("/sys/bus/w1/devices/")
+    sensors = []
+    for f in list(p.glob('*')):
+        if f.name.startswith("28-"):
+            sensors.append(f.name)
+
+    return sensors
 
 def check_process(process):
   proc = subprocess.Popen(["if pgrep " + process + " >/dev/null 2>&1; then echo '1'; else echo '0'; fi"], stdout=subprocess.PIPE, shell=True)
@@ -109,6 +118,16 @@ heating = False
 
 signal.signal(signal.SIGINT, signal_handler)
 
+# find the 1-wire temp sensor
+
+sensors = find_1wire_sensor()
+
+# use the first
+if sensors.len() > 0:
+    w1_temp_sensor_case = sensors[0]
+else:
+    print "Error: not 1-wire Sensor found"
+
 try:
    thread.start_new_thread( check_inet, (5, ) )
 except:
@@ -152,7 +171,7 @@ while 1:
     # i2c BME280 Sensor interior
     data= bme280.sample(i2c_bus, bme280_interior_addr, bme280_interior_cal_params)
 
-    data_line += '{:6.3f},{:5.2f},{:6.2f},'.format(data.temperature, data.humidity, data.pressure)
+    data_line += '{:6.3f},{:5.2f},{:7.2f},'.format(data.temperature, data.humidity, data.pressure)
 
     temp_inside = data.temperature 
 
@@ -160,7 +179,7 @@ while 1:
 
     data = bme280.sample(i2c_bus, bme280_outside_addr, bme280_outside_cal_params)
 
-    data_line += '{:6.3f},{:5.2f},{:6.2f},'.format(data.temperature, data.humidity, data.pressure)
+    data_line += '{:6.3f},{:5.2f},{:7.2f},'.format(data.temperature, data.humidity, data.pressure)
 
 
     # heater check

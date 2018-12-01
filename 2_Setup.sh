@@ -129,6 +129,12 @@ if [[ $BOARD_TARGET == 7 ]]; then
   sudo systemctl stop serial-getty@ttyS0.service
   sudo systemctl disable serial-getty@ttyS0.service
 
+  # prepare loging file
+  touch /var/log/sensor_data_log.csv
+  chown :ttn /var/log/sensor_data_log.csv
+  chmod g+rw /var/log/sensor_data_log.csv
+
+  
   #install stuff
 
   sudo apt install -y python-smbus python3-smbus
