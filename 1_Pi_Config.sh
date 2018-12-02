@@ -185,6 +185,10 @@ if [[ ! -f /usr/local/bin/log2ram ]]; then
 		replace /etc/logrotage.d/rsyslog "^.*monthly.*$" "    daily"
 		replace /etc/logrotage.d/rsyslog "^.*delaycompress.*$" "  "
 
+        # more space, use rsync
+        replace /etc/log2ram.conf "^.SIZE=.*$" "SIZE=256M"
+        replace /etc/log2ram.conf "^.USE_RSYNC=.*$" "USE_RSYNC=true"
+
 		echo "forcing one log rotation"
 		logrotate /etc/logrotate.conf
 		echo "Please don't forget to adjust the logrotate"
