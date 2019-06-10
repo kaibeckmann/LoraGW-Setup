@@ -23,7 +23,17 @@ import smbus2
 import bme280
 from datetime import datetime
 from pathlib import Path
+import cayenne.client
 
+TYPE_RELATIVE_HUMIDITY = "rel_hum" # Relative Humidity
+
+UNIT_PERCENT = "p" # % (0 to 100)
+UNIT_DIGITAL = "d" # Digital (0/1)
+
+
+MQTT_USERNAME  = ""
+MQTT_PASSWORD  = ""
+MQTT_CLIENT_ID = ""
 
 sensor_read_interval_minutes = 5
 temp_heater_on = 4.0
@@ -36,7 +46,7 @@ bme280_outside_addr  = 0x76
 
 gpio_heating = 18
 
-w1_temp_sensor_case = "28-01156351aeff"
+w1_temp_sensor_case = "28-0115635389ff"
 
 logFilePath = "/var/log/sensor_data_log.csv"
 
@@ -71,6 +81,7 @@ def check_process(process):
     return True
   else:
     return False
+
 
 def check_inet(delay):
   global internet
@@ -128,10 +139,27 @@ if len(sensors) > 0:
 else:
     print("Error: not 1-wire Sensor found")
 
+
+# connection to cayenne
+mqtt_client = cayenne.client.CayenneMQTTClient()
+#mqtt_client.begin(MQTT_USERNAME, MQTT_PASSWORD, MQTT_CLIENT_ID, port=8883)
+mqtt_client.begin(MQTT_USERNAME, MQTT_PASSWORD, MQTT_CLIENT_ID)
+
+def loop_mqtt(nix):
+    global mqtt_client
+    mqtt_client.loop_forever()
+
+#try:
+#   _thread.start_new_thread( loop_mqtt, (5, )  )
+#except:
+#   print("Error: unable to start loop thread")
+
+
 try:
    _thread.start_new_thread( check_inet, (5, ) )
 except:
    print("Error: unable to start thread")
+
 
 i2c_bus = smbus2.SMBus(i2c_port)
 
@@ -147,6 +175,8 @@ if os.stat(logFilePath).st_size == 0:
 
 # Now wait!
 while 1:
+
+    mqtt_client.loop()
 
     now = datetime.now()
 
@@ -167,6 +197,13 @@ while 1:
     data_line += '{:6.3f}'.format(temperature)
     data_line += ','
 
+    # cayenne
+    mqtt_client.loop()
+    mqtt_client.loop()
+    mqtt_client.celsiusWrite(1, temperature)
+    mqtt_client.loop()
+    mqtt_client.loop()
+    mqtt_client.loop()
 
     # i2c BME280 Sensor interior
     data= bme280.sample(i2c_bus, bme280_interior_addr, bme280_interior_cal_params)
@@ -175,12 +212,28 @@ while 1:
 
     temp_inside = data.temperature 
 
+
+    # cayenne
+    mqtt_client.celsiusWrite(2, data.temperature)
+    mqtt_client.loop()
+    mqtt_client.virtualWrite(3, data.humidity, TYPE_RELATIVE_HUMIDITY, UNIT_PERCENT)
+    mqtt_client.loop()
+    mqtt_client.hectoPascalWrite(4, data.pressure)
+    mqtt_client.loop()
+    
     # i2c BME280 Sensor outside
 
     data = bme280.sample(i2c_bus, bme280_outside_addr, bme280_outside_cal_params)
 
     data_line += '{:6.3f},{:5.2f},{:7.2f},'.format(data.temperature, data.humidity, data.pressure)
 
+    # cayenne
+    mqtt_client.celsiusWrite(5, data.temperature)
+    mqtt_client.loop()
+    mqtt_client.virtualWrite(6, data.humidity, TYPE_RELATIVE_HUMIDITY, UNIT_PERCENT)
+    mqtt_client.loop()
+    mqtt_client.hectoPascalWrite(7, data.pressure)
+    mqtt_client.loop()
 
     # heater check
 
@@ -193,8 +246,16 @@ while 1:
         heating = False
 
     data_line += str(heating)
+
+    
+    mqtt_client.virtualWrite(8, heating, "digital_sensor", UNIT_DIGITAL)
+    mqtt_client.loop()
+    mqtt_client.loop()
+    mqtt_client.loop()
+
     file.write(data_line + "\n")
     file.flush()
+
 
     time.sleep(60 * sensor_read_interval_minutes)
 

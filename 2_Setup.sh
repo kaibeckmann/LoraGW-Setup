@@ -142,6 +142,7 @@ if [[ $BOARD_TARGET == 7 ]]; then
   sudo pip install RPi.bme280
   sudo pip3 install RPi.bme280
   sudo pip3 install RPi.GPIO
+â sudo pip3 install cayenne-mqtt
 fi
 
 if [[ $MONITOR_SCRIPT == "" ]]; then
